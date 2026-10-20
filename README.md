@@ -1,58 +1,114 @@
 # DOTS Survivors 玩家模组生成器
 
-用自然语言调整《DOTS Survivors》现有武器的数值，生成可安装到 Windows 游戏中的 `.dsmod` 文件。当前版本面向受邀玩家测试，支持修改武器各等级的**基础伤害**和**冷却时间**。
+这是一个面向《DOTS Survivors》Windows 版本封闭测试玩家的网页工具。玩家用自然语言描述武器平衡调整，服务端调用兼容 OpenAI Chat Completions 的模型，校验生成结果并提供 `.dsmod` 文件下载。模组只包含数据，不包含脚本或可执行内容。
 
-## 网站截图
+## 页面预览
 
-以下截图来自本地运行的中文界面，展示的是尚未生成模组时的页面。
+以下截图展示本地中文界面的主要页面：
 
-**首页**
+| 生成器首页 | 编辑需求 | 结果预览 |
+| --- | --- | --- |
+| ![生成器首页](docs/screenshots/home.jpg) | ![填写武器与调整需求](docs/screenshots/editor.jpg) | ![检查生成的模组](docs/screenshots/preview.jpg) |
 
-![网站首页](docs/screenshots/home.jpg)
+## 功能
 
-**填写需求**
+- 通过邀请码进入封闭测试界面，支持简体中文和英文。
+- 为现有武器的各个等级生成基础伤害、冷却时间调整；黑洞武器仅支持调整冷却时间。
+- 生成前在服务端校验武器、等级和数值范围，网页提供结果预览、JSON 复制和 `.dsmod` 下载。
+- 按 IP 限制每小时生成次数，并限制全站每日生成次数。
+- 模型密钥只由服务端读取；模型接口由环境变量配置。
 
-![武器与需求输入区](docs/screenshots/editor.jpg)
+## 系统架构
 
-**结果预览区**
+```mermaid
+flowchart LR
+    Player[玩家浏览器]
+    UI[静态网页<br/>HTML / CSS / JavaScript]
+    Server[Node.js 服务<br/>静态文件与生成 API]
+    Validate[输入与模型结果校验]
+    Model[OpenAI 兼容模型接口]
+    Mod[版本 1 .dsmod JSON]
+    Game[Unity 游戏模组加载器]
 
-![模组结果预览区](docs/screenshots/preview.jpg)
+    Player --> UI
+    UI -->|邀请码、武器、需求| Server
+    Server --> Validate
+    Validate -->|通过后请求| Model
+    Model -->|生成 JSON| Validate
+    Validate -->|返回预览并下载| UI
+    UI --> Mod
+    Mod -->|玩家手动复制到 Mods 文件夹| Game
+```
 
-## 玩家如何使用
+网页服务使用 Node.js 内置模块提供静态文件与 `/api/mods/generate` 接口。Unity 游戏在本地读取 `.dsmod` 文件；玩家下载后需手动复制文件并重启游戏。
 
-1. 打开测试网站，输入测试邀请码。
-2. 选择一把武器，描述希望调整的等级和数值。例如：“只把圆锯第 1 级伤害从 20 提高到 28，冷却从 3 秒缩短到 2.4 秒；其他等级不变。”
-3. 点击“生成模组”，核对结果中的武器、等级和数值，然后下载 `.dsmod` 文件。
-4. 先运行一次游戏。在文件资源管理器中打开 `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Survivor\Mods`，将文件直接放入该文件夹，再重启游戏。若游戏的公司名或产品名发生变化，以 Unity Player 日志中 `[Player Mods]` 显示的路径为准。
+## 技术栈
 
-游戏在每局开始前读取本地模组。下载、复制和重启目前需要玩家手动完成。页面默认使用简体中文，右上角可切换英文。
+| 部分 | 技术 | 用途 |
+| --- | --- | --- |
+| 页面 | HTML、CSS、原生 JavaScript | 表单、双语界面、结果预览与文件下载 |
+| 服务端 | Node.js 20+、内置 `node:http`、`fetch` | 静态资源、生成接口、模型请求与限流 |
+| 模型接口 | OpenAI 兼容的 Chat Completions API | 将玩家描述转换为结构化调整数据 |
+| 模组格式 | JSON、`.dsmod` 扩展名 | 与 Unity 加载器共享的数据包契约 |
+| 校验 | Node.js 内置测试运行器 | `node --test` 校验等级及数值边界 |
+
+项目没有第三方 npm 运行时依赖，无需执行 `npm install`。
 
 ## 本地运行
 
-需要 **Node.js 20 或更新版本**，无需安装第三方 npm 包。
+需要 Node.js 20 或更新版本。在项目根目录使用 PowerShell；已有 `.env` 时保留现有文件：
 
 ```powershell
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+```
+
+编辑 `.env`，填写测试邀请码、模型 API 密钥和模型名称，然后启动：
+
+```powershell
 npm start
 ```
 
-在 `.env` 中填写 `BETA_ACCESS_CODE`、`LLM_API_KEY` 和 `LLM_MODEL`，然后访问 <http://127.0.0.1:4173/>。`.env.example` 默认配置 DeepSeek 的兼容接口；使用其他兼容服务时，可调整 `LLM_PROVIDER`、`LLM_BASE_URL` 和 `LLM_MODEL`。不要把真实密钥或邀请码提交到 Git。
+在浏览器打开 <http://127.0.0.1:4173/>。`npm start` 已在 Node.js v24.18.0 环境验证可启动；访问地址和端口可通过 `HOST`、`PORT` 调整。
 
-| 配置项 | 作用 |
+| 环境变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `HOST` | `127.0.0.1` | HTTP 服务监听地址 |
+| `PORT` | `4173` | HTTP 服务端口 |
+| `BETA_ACCESS_CODE` | 空 | 封闭测试邀请码；未配置时生成接口不可用 |
+| `LLM_PROVIDER` | `openai-compatible` | 模型适配器；支持 `openai-compatible`、`deepseek` |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | 兼容接口的基础地址；示例环境文件配置为 DeepSeek 地址 |
+| `LLM_API_KEY` | 空 | 服务端模型 API 密钥 |
+| `LLM_MODEL` | 空 | 请求使用的模型名称 |
+| `MAX_GENERATIONS_PER_WINDOW` | `4` | 每 IP 滚动一小时生成上限 |
+| `MAX_GENERATIONS_PER_DAY` | `20` | 全站每日生成上限，按 UTC 日期计算 |
+
+不要将真实邀请码或 API 密钥提交到 Git。限流计数保存在服务进程内存中，服务重启后会重置。
+
+## 玩家使用与安装
+
+1. 打开测试网站并输入邀请码。
+2. 选择武器，用自然语言描述希望调整的等级和数值。
+3. 检查预览中的武器、等级与改动，下载 `.dsmod` 文件。
+4. 先启动一次游戏，然后将文件复制到 `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Survivor\Mods`，再重启游戏。若公司名或产品名不同，请使用 Unity Player 日志 `[Player Mods]` 消息中显示的目录。
+
+模组在每局开始时加载。网站不会自动安装模组，也没有游戏内模组浏览器或 Steam Workshop 集成。
+
+## `.dsmod` 范围
+
+版本 1 使用 `gameId: "dots-survivors"` 和 `schemaVersion: 1`，通过 `weapons` 和 `levels` 描述现有武器的等级改动。`level` 从 1 开始；未指定的等级与字段保留游戏原值。
+
+| 字段 | 支持范围 |
 | --- | --- |
-| `HOST`、`PORT` | 监听地址和端口，默认 `127.0.0.1:4173` |
-| `BETA_ACCESS_CODE` | 测试邀请码；未设置时无法生成模组 |
-| `LLM_PROVIDER`、`LLM_BASE_URL`、`LLM_MODEL` | 模型提供方、兼容接口地址和模型名 |
-| `LLM_API_KEY` | 仅保存在服务端的模型密钥 |
-| `MAX_GENERATIONS_PER_WINDOW` | 每个 IP 每小时的生成次数，默认 4 |
-| `MAX_GENERATIONS_PER_DAY` | 全站每天的生成次数，默认 20，以 UTC 日期计算 |
+| 基础伤害 | 0–10,000 的整数；黑洞不支持伤害改动 |
+| 武器冷却 | 0.1–600 秒 |
+| 等级 | 所选武器现有升级等级；当前武器目录为 8 级 |
 
-执行 `npm test` 可运行现有校验测试。生成次数保存在进程内存中，重启服务后会重置。面向远程玩家开放时，应使用 HTTPS 并妥善分发邀请码。
+Unity 加载器也会校验模组。它最多读取 Mods 目录顶层的 50 个文件，每个文件不超过 64 KiB；多个文件修改同一字段时，按文件名不区分大小写排序应用，后应用的值生效。完整格式与加载规则见 Unity 项目 `Assets/DOTSSurvivors/AI/MarkdownDocumentation/integrations/PlayerMods.md`。
 
-## 模组范围与格式
+## 开发校验
 
-生成器只输出数据文件，不包含 C#、程序集、原生代码或素材。版本 1 只能调整现有武器的基础伤害（0–10,000）和冷却时间（0.1–600 秒）；黑洞武器只能调整冷却时间。未指定的武器等级保持游戏原有数值。
+```powershell
+npm test
+```
 
-网站与 Unity 加载器共同遵循 `.dsmod` 契约，详见 Unity 项目中的 `Assets/DOTSSurvivors/AI/MarkdownDocumentation/integrations/PlayerMods.md`。服务端和游戏内都会校验版本、武器、等级与数值范围。
-
-目前是封闭测试版，尚无公开托管服务、游戏内模组浏览器、自动安装或 Steam Workshop 集成。
+该命令运行仓库现有的 Node.js 校验用例（`node --test`）。
