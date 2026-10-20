@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <title>战场调校 — DOTS Survivors 模组</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="战场调校首页" data-i18n-aria-label="brandHome">
+        <span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+        <span class="brand-text">DOTS<span class="brand-separator">/</span>MOD STUDIO</span>
+      </a>
+      <div class="header-actions">
+        <span class="beta-pill"><span class="status-dot" aria-hidden="true"></span><span data-i18n="closedBeta">封闭测试</span><span class="beta-divider"></span><span data-i18n="windowsBuild">Windows 版</span></span>
+        <div class="language-switch" role="group" aria-label="语言 / Language">
+          <button type="button" data-lang="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-spark" aria-hidden="true">✦</span><span data-i18n="eyebrow">DOTS SURVIVORS · 模组工坊</span></p>
+          <h1 id="hero-title"><span data-i18n="heroFirst">调校武器</span><br><em data-i18n="heroSecond">改变下一局。</em></h1>
+          <p class="hero-description" data-i18n="introCopy">描述武器的伤害和攻击间隔，生成器会制作可放入游戏的平衡模组。</p>
+          <div class="hero-facts" aria-label="支持范围" data-i18n-aria-label="scopeAria">
+            <span class="fact"><span class="fact-icon" aria-hidden="true">⌁</span><span data-i18n="dataOnly">纯数据模组</span></span>
+            <span class="fact"><span class="fact-icon" aria-hidden="true">◉</span><span data-i18n="scopeShort">伤害与冷却时间</span></span>
+            <span class="fact"><span class="fact-icon" aria-hidden="true">↗</span><span data-i18n="gameReady">下载后放入游戏</span></span>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="visual-grid"></div>
+          <div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div>
+          <div class="visual-core"><span>DS</span><small>MOD</small></div>
+          <div class="visual-node node-a"></div><div class="visual-node node-b"></div><div class="visual-node node-c"></div>
+          <div class="visual-caption caption-top">DATA / ONLY</div><div class="visual-caption caption-bottom">SCHEMA 01 · WINDOWS</div>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="模组生成器" data-i18n-aria-label="workbenchAria">
+        <section class="editor-panel" aria-labelledby="bench-title">
+          <div class="panel-heading">
+            <div class="step-label"><span class="step-number">01</span><span data-i18n="benchLabel">平衡调校</span></div>
+            <h2 id="bench-title" data-i18n="benchTitle">设置改动</h2>
+            <p data-i18n="editorIntro">选一把武器，用自己的话描述想改什么。</p>
+          </div>
+
+          <div class="form-group">
+            <div class="field-heading"><label for="weapon" data-i18n="weaponLabel">武器</label><span class="field-index">01 / 02</span></div>
+            <div class="select-shell">
+              <span class="select-symbol" aria-hidden="true">✦</span>
+              <select id="weapon" name="weapon">
+                <option value="BlackHole">黑洞</option>
+                <option value="CO2Cloud">二氧化碳云</option>
+                <option value="DroneSwarm">无人机群</option>
+                <option value="Jetpack">喷气背包</option>
+                <option value="LaserStrike">激光打击</option>
+                <option value="OxygenHose">氧气管</option>
+                <option value="PlasmaBlast">等离子冲击</option>
+                <option value="RadioactiveWaste">放射性废料</option>
+                <option value="SatelliteToss">卫星投掷</option>
+                <option value="SawBlade" selected>圆锯（Buzz Saw）</option>
+                <option value="Screwdriver">螺丝刀</option>
+                <option value="Wrench">扳手</option>
+              </select>
+              <span class="select-caret" aria-hidden="true">⌄</span>
+            </div>
+            <p id="weapon-hint" class="weapon-hint">8 个升级等级 · 可调整伤害和冷却时间</p>
+          </div>
+
+          <div class="form-group prompt-group">
+            <div class="field-heading"><label for="brief" data-i18n="briefLabel">描述你想要的平衡改动</label><span class="field-index">02 / 02</span></div>
+            <div class="composer-shell">
+              <div class="composer-top"><span class="composer-star" aria-hidden="true">✦</span><span data-i18n="composerLabel">你的需求</span><span class="composer-limit" id="counter">0 / 1200</span></div>
+              <textarea id="brief" maxlength="1200" placeholder="例如：只把圆锯第 1 级伤害从 20 提高到 28，冷却从 3 秒缩短到 2.4 秒；其他等级不变。"></textarea>
+              <div class="composer-bottom"><span data-i18n="bounds">伤害：0–10,000 · 冷却：0.1–600 秒</span><span class="composer-hotkey">Ctrl ↵</span></div>
+            </div>
+            <div class="examples"><span data-i18n="tryExample">试试这样描述</span><button type="button" data-example="damage" data-i18n="damageExample">加强前期伤害</button><button type="button" data-example="cooldown" data-i18n="cooldownExample">缩短冷却时间</button></div>
+          </div>
+
+          <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+          <div class="submit-row"><p class="privacy-note" data-i18n="privacyNote">你的需求会发送给本次测试配置的模型服务。本服务不保存需求历史。</p><button id="generate" class="primary-button" type="button"><span data-i18n="generate">生成模组</span><span class="button-arrow" aria-hidden="true">↗</span></button></div>
+        </section>
+
+        <aside class="output-panel" aria-label="模组预览" data-i18n-aria-label="previewAria">
+          <div class="output-heading"><div class="step-label"><span class="step-number">02</span><span data-i18n="outputLabel">生成结果</span></div><span class="output-badge" data-i18n="outputBadge">.DSMOD 预览</span></div>
+          <section id="result-empty" class="empty-preview">
+            <div class="package-preview" aria-hidden="true"><div class="package-shine"></div><div class="package-top"><span>DOTS / SURVIVORS</span><span>01</span></div><div class="package-glyph">✦</div><div class="package-weapon" id="selected-weapon">圆锯（Buzz Saw）</div><div class="package-rule"></div><div class="package-levels"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span></div><div class="package-bottom"><span>WEAPON BALANCE</span><span>DATA ONLY</span></div></div>
+            <div class="empty-copy"><span class="empty-icon" aria-hidden="true">✧</span><h3 data-i18n="previewTitle">改动会显示在这里</h3><p data-i18n="previewCopy">生成后，先核对武器等级和数值，再下载模组包。</p></div>
+          </section>
+
+          <section id="result" class="result" hidden aria-live="polite">
+            <div class="result-top"><span class="ready-indicator"><span class="status-dot" aria-hidden="true"></span><span data-i18n="packageReady">模组已就绪</span></span><span class="file-chip">.DSMOD</span></div>
+            <h2 id="result-title">模组包</h2>
+            <p id="result-summary" class="result-summary"></p>
+            <div class="change-heading"><span data-i18n="changedLevels">改动等级</span><span id="result-count">—</span></div>
+            <div id="result-levels" class="level-list"></div>
+            <div class="result-actions"><button id="download" class="download-button" type="button"><span data-i18n="download">下载模组</span><span aria-hidden="true">↓</span></button><button id="copy" class="text-button" type="button" data-i18n="copyJson">复制模组 JSON</button></div>
+            <details class="install-guide"><summary data-i18n="installGuide">如何安装到游戏</summary><p class="install-hint"><b data-i18n="installLabel">安装：</b><span data-i18n="installBefore">在文件资源管理器中按</span> <kbd>Ctrl</kbd> + <kbd>L</kbd><span data-i18n="installMiddle">，粘贴路径</span> <code>%USERPROFILE%\AppData\LocalLow\DefaultCompany\Survivor\Mods</code><span data-i18n="installAfter">。如文件夹不存在，请先创建；将下载的文件复制进去，然后重启游戏。</span></p></details>
+          </section>
+          <div class="output-foot"><span class="output-foot-icon" aria-hidden="true">◈</span><span data-i18n="outputFoot">仅修改现有武器数值，不包含代码或素材。</span></div>
+        </aside>
+      </section>
+      <footer class="footer"><span data-i18n="footerLeft">战场调校 / 玩家模组生成器</span><span data-i18n="footerRight">你的战局，你来定规则。</span></footer>
+    </main>
+  </div>
+
+  <dialog id="beta-dialog" class="beta-dialog">
+    <form method="dialog" class="dialog-close-row"><button class="close-button" aria-label="关闭" data-i18n-aria-label="close">×</button></form>
+    <div class="dialog-symbol" aria-hidden="true">✦</div>
+    <p class="dialog-eyebrow" data-i18n="testerAccess">受邀玩家测试</p>
+    <h2><span data-i18n="dialogFirst">输入你的</span><br><em data-i18n="dialogSecond">邀请码。</em></h2>
+    <p class="dialog-copy" data-i18n="dialogCopy">工坊目前只面向少量玩家测试。邀请码仅保存在本次浏览器会话中。</p>
+    <label class="dialog-label" for="access-code" data-i18n="inviteCode">邀请码</label>
+    <input id="access-code" type="password" autocomplete="off" maxlength="160">
+    <button id="save-code" class="primary-button dialog-button" type="button"><span data-i18n="continue">继续</span><span class="button-arrow" aria-hidden="true">↗</span></button>
+    <p id="dialog-error" class="dialog-error" role="alert" hidden></p>
+  </dialog>
+</body>
+</html>
