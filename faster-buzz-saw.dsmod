@@ -1,0 +1,20 @@
+{
+  "gameId": "dots-survivors",
+  "schemaVersion": 1,
+  "id": "faster-buzz-saw",
+  "title": "Faster Buzz Saw",
+  "weapons": [
+    {
+      "weaponType": "SawBlade",
+      "levels": [
+        {
+          "level": 1,
+          "overrideDamage": true,
+          "damage": 28,
+          "overrideCooldown": true,
+          "cooldownSeconds": 2.4
+        }
+      ]
+    }
+  ]
+}

@@ -17,30 +17,38 @@
 - 生成前在服务端校验武器、等级和数值范围，网页提供结果预览、JSON 复制和 `.dsmod` 下载。
 - 按 IP 限制每小时生成次数，并限制全站每日生成次数。
 - 模型密钥只由服务端读取；模型接口由环境变量配置。
+- 提供本地 CLI 与仓库内 Agent 技能，支持生成、校验、安装 `.dsmod`，并根据 Unity 日志检查是否加载。
 
 ## 系统架构
 
 ```mermaid
 flowchart LR
     Player[玩家浏览器]
+    Agent[本地 AI 代理]
     UI[静态网页<br/>HTML / CSS / JavaScript]
     Server[Node.js 服务<br/>静态文件与生成 API]
+    CLI[Node.js 本地 CLI]
+    Catalog[共享武器目录与包校验]
     Validate[输入与模型结果校验]
     Model[OpenAI 兼容模型接口]
     Mod[版本 1 .dsmod JSON]
     Game[Unity 游戏模组加载器]
 
     Player --> UI
+    Agent -->|自然语言转为明确数值| CLI
     UI -->|邀请码、武器、需求| Server
-    Server --> Validate
+    Server --> Catalog
+    CLI --> Catalog
+    Catalog --> Validate
     Validate -->|通过后请求| Model
     Model -->|生成 JSON| Validate
     Validate -->|返回预览并下载| UI
     UI --> Mod
+    CLI --> Mod
     Mod -->|玩家手动复制到 Mods 文件夹| Game
 ```
 
-网页服务使用 Node.js 内置模块提供静态文件与 `/api/mods/generate` 接口。Unity 游戏在本地读取 `.dsmod` 文件；玩家下载后需手动复制文件并重启游戏。
+网页服务使用 Node.js 内置模块提供静态文件与 `/api/mods/generate` 接口。本地 CLI 与网页共用武器目录和数据包校验，CLI 还可安装文件并检查 Unity Player 日志。游戏在本地读取 `.dsmod` 文件，加载日志与实际数值验证是两个不同的检查步骤。
 
 ## 技术栈
 
@@ -48,11 +56,24 @@ flowchart LR
 | --- | --- | --- |
 | 页面 | HTML、CSS、原生 JavaScript | 表单、双语界面、结果预览与文件下载 |
 | 服务端 | Node.js 20+、内置 `node:http`、`fetch` | 静态资源、生成接口、模型请求与限流 |
+| 本地工具 | Node.js CLI、仓库内 Agent 技能 | 按明确数值生成、校验、安装并检查日志 |
 | 模型接口 | OpenAI 兼容的 Chat Completions API | 将玩家描述转换为结构化调整数据 |
 | 模组格式 | JSON、`.dsmod` 扩展名 | 与 Unity 加载器共享的数据包契约 |
 | 校验 | Node.js 内置测试运行器 | `node --test` 校验等级及数值边界 |
 
 项目没有第三方 npm 运行时依赖，无需执行 `npm install`。
+
+## 本地 Agent 与 CLI
+
+在项目根目录运行 `npm run mod -- catalog` 查看现有武器。下面的命令会创建并自动校验一个只调整圆锯第 1 级的模组：
+
+```powershell
+npm run mod -- create --weapon SawBlade --title "Faster Buzz Saw" --id faster-buzz-saw --set "1:damage=28,cooldown=2.4" --out .\faster-buzz-saw.dsmod
+```
+
+`npm run mod -- validate .\faster-buzz-saw.dsmod` 可再次校验。安装与日志检查的用法见 [本地 CLI 文档](docs/cli.md)。仓库内的 [Agent 技能](.agents/skills/dots-survivors-local-modder/SKILL.md) 让支持技能的编程代理根据玩家描述调用这些工具。CLI 本身不调用模型，具体改动值由玩家或代理确认。
+
+开发者还可运行 `npm run catalog:check -- "D:\Unity Space\Survivor"`，检查当前武器目录是否与 Unity 的升级资源一致。
 
 ## 本地运行
 

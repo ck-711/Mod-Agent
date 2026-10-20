@@ -2,8 +2,13 @@
   "name": "dots-survivors-player-mod-agent",
   "private": true,
   "type": "module",
+  "bin": {
+    "dots-mod": "./bin/mod-agent.mjs"
+  },
   "scripts": {
     "start": "node server.mjs",
+    "mod": "node bin/mod-agent.mjs",
+    "catalog:check": "node scripts/check-catalog.mjs",
     "test": "node --test"
   },
   "engines": {
