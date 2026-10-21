@@ -14,30 +14,33 @@
 
 ## 系统架构
 
+**生成 `.dsmod` 数据包**
+
 ```mermaid
 flowchart LR
-    player["玩家描述武器调整"] --> ui["浏览器界面<br/>选择武器、预览和下载"] --> server["Node.js server.mjs<br/>邀请码、输入约束与额度"]
-    catalog["武器目录<br/>现有等级与基础数值"] --> prompt["构造受约束的生成提示词"]
-    server --> prompt --> model["OpenAI 兼容模型接口"] --> proposal["模型提出等级与数值改动"]
-    proposal --> level["level-validation.mjs<br/>等级、字段和数值校验"] --> contract["package-contract.mjs<br/>版本 1 数据包契约"]
-    catalog --> level
-    contract --> package[".dsmod JSON 数据包"] --> ui
+    player["网页需求"] --> server["Node.js<br/>准入与额度"]
+    server --> model["模型接口<br/>提出武器数值"]
+    model --> validate["共享契约<br/>等级与数值校验"]
+    agent["本地 Agent / CLI"] --> validate
+    validate --> package[".dsmod 数据包"]
+    classDef entry fill:#EAF4FF,stroke:#5B8DEF,color:#17324D;
+    classDef outcome fill:#EAF8F0,stroke:#49A878,color:#184B32;
+    class player,agent entry;
+    class package outcome;
+```
 
-    agent["本地 AI 代理<br/>将需求明确为数值"] --> cli["Node.js CLI<br/>创建与校验"] --> contract
-    package --> install["玩家确认安装或手动复制"]
-    ui -->|本机操作接口| local["local-mod-workflow.mjs<br/>回环地址、来源与同名校验"]
-    cli --> local
-    install --> local --> mods["游戏 Mods 目录"]
-    install -->|手动复制| mods
+**安装、游戏加载与验证**
 
-    subgraph runtime["Unity 游戏启动与模组应用"]
-        mods --> loader["PlayerModLoaderSystem<br/>逐个读取、限制大小并复核契约"]
-        baseline["烘焙的武器升级 Blob"] --> patch["复制基线并只修改声明字段"]
-        loader --> patch --> start["GameStartSystem<br/>使用应用后的数值"]
-        loader --> log["Player.log<br/>加载与补丁消息"]
-    end
-    log --> verify["CLI 或本机网页验证<br/>比较文件与安装后日志"]
-    mods --> verify
+```mermaid
+flowchart LR
+    package[".dsmod 文件"] --> mods["玩家安装到 Mods"]
+    mods --> loader["Unity 加载器<br/>复核数据包"]
+    loader --> game["复制基线 Blob<br/>下一局应用数值"]
+    loader --> verify["Player.log<br/>核对加载结果"]
+    classDef entry fill:#EAF4FF,stroke:#5B8DEF,color:#17324D;
+    classDef outcome fill:#EAF8F0,stroke:#49A878,color:#184B32;
+    class package entry;
+    class game,verify outcome;
 ```
 
 网页服务使用 Node.js 内置模块提供静态文件、生成接口与本机模组接口。CLI 与网页共用武器目录、数据包校验、安装与日志检查。只有服务监听本机回环地址时，本机操作接口才可用；网页不会自动安装，须由玩家点击安装。游戏日志用于确认加载状态，游戏内效果通过实机数值检查确认。接口和限制见 [网页与 CLI 互通说明](docs/web-cli.md)。
