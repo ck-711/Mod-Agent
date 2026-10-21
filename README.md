@@ -136,13 +136,13 @@ Unity 加载器也会校验模组。它最多读取 Mods 目录顶层的 50 个�
 
 ## Benchmark / 评测
 
-| 简历示例值 | 复核口径 | 当前可核对结果 |
+| 评测目标（待复核） | 测量方法 | 代码或现有结果 |
 | --- | --- | --- |
-| 200 条需求，首轮格式通过率 92.0% | 200 条独立需求的首次生成结果通过共享 `.dsmod` 契约校验，示例对应 184/200 | `evals/mod-generation-eval.mjs` 输出 `format_valid_rate` |
-| 200 条需求，需求一致率 87.5% | 同一批结果与人工标注的武器、等级及改动数值完全一致，示例对应 175/200 | `evals/mod-generation-eval.mjs` 输出 `exact_field_match_rate` |
+| 200 条需求，首轮格式通过率 92.0% | 200 条独立需求的首次生成结果通过共享 `.dsmod` 契约校验 | `evals/mod-generation-eval.mjs` 输出 `format_valid_rate` |
+| 200 条需求，需求一致率 87.5% | 同一批结果与人工标注的武器、等级及改动数值完全一致 | `evals/mod-generation-eval.mjs` 输出 `exact_field_match_rate` |
 | 48/48 项回归场景 | 分别列出并执行 48 个场景，保留测试运行记录 | 现有 `npm test` 实际为 8/8（Node.js v24.18.0，2026-10-21） |
 
-前两行是简历示例值，不属于下方契约测试结果；生成质量应使用人工审核的 200 条独立需求和原始模型输出来复核。
+自然语言生成质量与契约测试属于不同评测口径；生成质量需要人工审核的独立需求和原始模型输出。
 
 ```powershell
 npm test
@@ -156,7 +156,7 @@ npm test
 {"id":"example-saw","expected":{"gameId":"dots-survivors","schemaVersion":1,"id":"gold-saw","title":"Gold Saw","weapons":[{"weaponType":"SawBlade","levels":[{"level":1,"overrideDamage":true,"damage":28,"overrideCooldown":false,"cooldownSeconds":0}]}]},"prediction":{"gameId":"dots-survivors","schemaVersion":1,"id":"model-saw","title":"Model Saw","weapons":[{"weaponType":"SawBlade","levels":[{"level":1,"overrideDamage":true,"damage":28,"overrideCooldown":false,"cooldownSeconds":0}]}]}}
 ```
 
-这是输入格式示例，不是实测样本。捕获生成结果时保留请求原文、所选武器、模型版本和失败响应；失败样本的 `prediction` 可设为 `null`。先在隔离的测试环境批量生成，留意服务按 IP 和每日限流，再运行：
+上述 JSON 仅示意输入格式。捕获生成结果时保留请求原文、所选武器、模型版本和失败响应；失败样本的 `prediction` 可设为 `null`。先在隔离的测试环境批量生成，留意服务按 IP 和每日限流，再运行：
 
 ```powershell
 node evals/mod-generation-eval.mjs --input evals/cases.jsonl --output evals/reports/mod-generation.json
