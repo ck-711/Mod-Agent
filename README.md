@@ -136,6 +136,14 @@ Unity 加载器也会校验模组。它最多读取 Mods 目录顶层的 50 个�
 
 ## Benchmark / 评测
 
+| 简历示例值 | 复核口径 | 当前可核对结果 |
+| --- | --- | --- |
+| 200 条需求，首轮格式通过率 92.0% | 200 条独立需求的首次生成结果通过共享 `.dsmod` 契约校验，示例对应 184/200 | `evals/mod-generation-eval.mjs` 输出 `format_valid_rate` |
+| 200 条需求，需求一致率 87.5% | 同一批结果与人工标注的武器、等级及改动数值完全一致，示例对应 175/200 | `evals/mod-generation-eval.mjs` 输出 `exact_field_match_rate` |
+| 48/48 项回归场景 | 分别列出并执行 48 个场景，保留测试运行记录 | 现有 `npm test` 实际为 8/8（Node.js v24.18.0，2026-10-21） |
+
+前两行是简历示例值，不属于下方契约测试结果；生成质量应使用人工审核的 200 条独立需求和原始模型输出来复核。
+
 ```powershell
 npm test
 ```
@@ -154,4 +162,4 @@ npm test
 node evals/mod-generation-eval.mjs --input evals/cases.jsonl --output evals/reports/mod-generation.json
 ```
 
-报告给出数据包格式合法率和改动字段完全匹配率，并包含逐条错误与数据集 SHA-256。合法率只验证共享契约；完全匹配率比较武器、等级、伤害与冷却的目标值，不代表游戏内实际生效。实机效果仍需按 [本地 CLI 文档](docs/cli.md) 安装、查看 Unity 日志并检查实际数值。目前仓库没有人工标注的生成评测集或该 Benchmark 的运行报告。
+报告给出数据包格式合法率和改动字段完全匹配率，并包含逐条错误与数据集 SHA-256。合法率只验证共享契约；完全匹配率比较武器、等级、伤害与冷却的目标值，不代表游戏内实际生效。实机效果仍需按 [本地 CLI 文档](docs/cli.md) 安装、查看 Unity 日志并检查实际数值。
