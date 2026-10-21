@@ -2,14 +2,6 @@
 
 这是一个面向《DOTS Survivors》Windows 版本封闭测试玩家的网页工具。玩家用自然语言描述武器平衡调整，服务端调用兼容 OpenAI Chat Completions 的模型，校验生成结果并提供 `.dsmod` 文件下载。模组只包含数据，不包含脚本或可执行内容。
 
-## 页面预览
-
-以下截图展示本地中文界面的主要页面：
-
-| 生成器首页 | 编辑需求 | 结果预览 |
-| --- | --- | --- |
-| ![生成器首页](docs/screenshots/home.jpg) | ![填写武器与调整需求](docs/screenshots/editor.jpg) | ![检查生成的模组](docs/screenshots/preview.jpg) |
-
 ## 功能
 
 - 通过邀请码进入封闭测试界面，支持简体中文和英文。
@@ -24,33 +16,28 @@
 
 ```mermaid
 flowchart LR
-    Player[玩家浏览器]
-    Agent[本地 AI 代理]
-    UI[静态网页<br/>HTML / CSS / JavaScript]
-    Server[Node.js 服务<br/>生成与本机操作 API]
-    CLI[Node.js 本地 CLI]
-    Contract[共享武器目录与 .dsmod 校验]
-    Local[共享安装与日志验证模块]
-    Model[OpenAI 兼容模型接口]
-    Mod[版本 1 .dsmod 文件]
-    Folder[本机 Mods 目录和 Player.log]
-    Game[Unity 游戏模组加载器]
+    player["玩家描述武器调整"] --> ui["浏览器界面<br/>选择武器、预览和下载"] --> server["Node.js server.mjs<br/>邀请码、输入约束与额度"]
+    catalog["武器目录<br/>现有等级与基础数值"] --> prompt["构造受约束的生成提示词"]
+    server --> prompt --> model["OpenAI 兼容模型接口"] --> proposal["模型提出等级与数值改动"]
+    proposal --> level["level-validation.mjs<br/>等级、字段和数值校验"] --> contract["package-contract.mjs<br/>版本 1 数据包契约"]
+    catalog --> level
+    contract --> package[".dsmod JSON 数据包"] --> ui
 
-    Player --> UI
-    Agent -->|自然语言转为明确数值| CLI
-    UI <-->|生成、导入与本机操作| Server
-    Server -->|生成请求| Model
-    Model -->|结构化结果| Server
-    Server --> Contract
-    CLI --> Contract
-    Server --> Local
-    CLI --> Local
-    Contract --> Mod
-    UI <-->|下载或导入| Mod
-    Local --> Folder
-    Mod --> Folder
-    Folder --> Game
-    Game -->|加载消息| Folder
+    agent["本地 AI 代理<br/>将需求明确为数值"] --> cli["Node.js CLI<br/>创建与校验"] --> contract
+    package --> install["玩家确认安装或手动复制"]
+    ui -->|本机操作接口| local["local-mod-workflow.mjs<br/>回环地址、来源与同名校验"]
+    cli --> local
+    install --> local --> mods["游戏 Mods 目录"]
+    install -->|手动复制| mods
+
+    subgraph runtime["Unity 游戏启动与模组应用"]
+        mods --> loader["PlayerModLoaderSystem<br/>逐个读取、限制大小并复核契约"]
+        baseline["烘焙的武器升级 Blob"] --> patch["复制基线并只修改声明字段"]
+        loader --> patch --> start["GameStartSystem<br/>使用应用后的数值"]
+        loader --> log["Player.log<br/>加载与补丁消息"]
+    end
+    log --> verify["CLI 或本机网页验证<br/>比较文件与安装后日志"]
+    mods --> verify
 ```
 
 网页服务使用 Node.js 内置模块提供静态文件、生成接口与本机模组接口。CLI 与网页共用武器目录、数据包校验、安装与日志检查。只有服务监听本机回环地址时，本机操作接口才可用；网页不会自动安装，须由玩家点击安装。游戏日志用于确认加载状态，游戏内效果通过实机数值检查确认。接口和限制见 [网页与 CLI 互通说明](docs/web-cli.md)。
