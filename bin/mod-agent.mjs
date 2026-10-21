@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { join, resolve, extname } from 'node:path';
+import { resolve, extname } from 'node:path';
 import { weapons } from '../weapon-catalog.mjs';
 import { createPackage, validatePackageText } from '../package-contract.mjs';
+import { installPackageText, verifyPackageText } from '../local-mod-workflow.mjs';
 
 const usage = `DOTS Survivors local mod agent
 
@@ -63,13 +64,6 @@ function parseLevelChange(value) {
   return entry;
 }
 
-function defaultModsDir() {
-  if (process.platform !== 'win32' || !process.env.USERPROFILE) {
-    throw new Error('Automatic Mods path requires Windows; pass --mods-dir explicitly.');
-  }
-  return join(process.env.USERPROFILE, 'AppData', 'LocalLow', 'DefaultCompany', 'Survivor', 'Mods');
-}
-
 function output(data, json) {
   if (json) console.log(JSON.stringify(data, null, 2));
   else console.log(data.message);
@@ -112,29 +106,19 @@ async function validate(args) {
 
 async function install(args) {
   const { options, positionals } = parseFlags(args, ['mods-dir', 'json'], 1);
-  const { packageData, text } = await readPackage(resolve(positionals[0]));
-  const directory = resolve(options['mods-dir'] || defaultModsDir());
-  const destination = join(directory, `${packageData.id}.dsmod`);
-  await mkdir(directory, { recursive: true });
-  await writeFile(destination, text, { flag: 'wx' });
-  output({ message: `Installed ${destination}. Restart the game, then run verify.`, path: destination, id: packageData.id }, options.json);
+  const { text } = await readPackage(resolve(positionals[0]));
+  const installed = await installPackageText(text, options['mods-dir'] ? { modsDir: options['mods-dir'] } : {});
+  output({ message: `Installed ${installed.path}. Restart the game, then run verify.`, ...installed }, options.json);
 }
 
 async function verify(args) {
   const { options, positionals } = parseFlags(args, ['mods-dir', 'log', 'json'], 1);
-  const { packageData, text } = await readPackage(resolve(positionals[0]));
-  const directory = resolve(options['mods-dir'] || defaultModsDir());
-  const installedPath = join(directory, `${packageData.id}.dsmod`);
-  const installed = await readFile(installedPath, 'utf8');
-  if (installed !== text) throw new Error('Installed package differs from the checked file.');
-  const logPath = resolve(options.log || join(directory, '..', 'Player.log'));
-  const [log, installedInfo, logInfo] = await Promise.all([readFile(logPath, 'utf8'), stat(installedPath), stat(logPath)]);
-  if (logInfo.mtimeMs < installedInfo.mtimeMs) throw new Error('Player.log predates this installation. Restart the game and try again.');
-  const loaded = log.indexOf(`[Player Mods] Loaded '${packageData.title}' (${packageData.id}).`);
-  if (loaded < 0) throw new Error('Player.log does not confirm this package was loaded.');
-  const applied = /\[Player Mods\] Applied data-only changes to (\d+) weapon prefab\(s\)/.exec(log.slice(loaded));
-  if (!applied || Number(applied[1]) < 1) throw new Error('Player.log does not confirm a weapon prefab was patched.');
-  output({ message: `Player.log confirms ${packageData.id} loaded and ${applied[1]} prefab(s) patched. In-game numeric values were not measured.`, id: packageData.id, installedPath, logPath, patchedPrefabs: Number(applied[1]) }, options.json);
+  const { text } = await readPackage(resolve(positionals[0]));
+  const paths = {};
+  if (options['mods-dir']) paths.modsDir = options['mods-dir'];
+  if (options.log) paths.logPath = options.log;
+  const verified = await verifyPackageText(text, paths);
+  output({ message: `Player.log confirms ${verified.id} loaded and ${verified.patchedPrefabs} prefab(s) patched. In-game numeric values were not measured.`, ...verified }, options.json);
 }
 
 const [command, ...args] = process.argv.slice(2);

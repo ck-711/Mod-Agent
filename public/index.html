@@ -33,7 +33,7 @@
           <div class="hero-facts" aria-label="支持范围" data-i18n-aria-label="scopeAria">
             <span class="fact"><span class="fact-icon" aria-hidden="true">⌁</span><span data-i18n="dataOnly">纯数据模组</span></span>
             <span class="fact"><span class="fact-icon" aria-hidden="true">◉</span><span data-i18n="scopeShort">伤害与冷却时间</span></span>
-            <span class="fact"><span class="fact-icon" aria-hidden="true">↗</span><span data-i18n="gameReady">下载后放入游戏</span></span>
+            <span class="fact"><span class="fact-icon" aria-hidden="true">↗</span><span data-i18n="gameReady">下载或安装到游戏</span></span>
           </div>
         </div>
         <div class="hero-visual" aria-hidden="true">
@@ -91,7 +91,7 @@
         </section>
 
         <aside class="output-panel" aria-label="模组预览" data-i18n-aria-label="previewAria">
-          <div class="output-heading"><div class="step-label"><span class="step-number">02</span><span data-i18n="outputLabel">生成结果</span></div><span class="output-badge" data-i18n="outputBadge">.DSMOD 预览</span></div>
+          <div class="output-heading"><div class="step-label"><span class="step-number">02</span><span data-i18n="outputLabel">模组预览</span></div><span class="output-badge" data-i18n="outputBadge">.DSMOD 预览</span></div>
           <section id="result-empty" class="empty-preview">
             <div class="package-preview" aria-hidden="true"><div class="package-shine"></div><div class="package-top"><span>DOTS / SURVIVORS</span><span>01</span></div><div class="package-glyph">✦</div><div class="package-weapon" id="selected-weapon">圆锯（Buzz Saw）</div><div class="package-rule"></div><div class="package-levels"><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span></div><div class="package-bottom"><span>WEAPON BALANCE</span><span>DATA ONLY</span></div></div>
             <div class="empty-copy"><span class="empty-icon" aria-hidden="true">✧</span><h3 data-i18n="previewTitle">改动会显示在这里</h3><p data-i18n="previewCopy">生成后，先核对武器等级和数值，再下载模组包。</p></div>
@@ -108,6 +108,27 @@
           </section>
           <div class="output-foot"><span class="output-foot-icon" aria-hidden="true">◈</span><span data-i18n="outputFoot">仅修改现有武器数值，不包含代码或素材。</span></div>
         </aside>
+      </section>
+      <section class="local-workflow" aria-labelledby="local-title">
+        <div class="local-heading">
+          <div>
+            <div class="step-label"><span class="step-number">03</span><span data-i18n="localLabel">本机联动</span></div>
+            <h2 id="local-title" data-i18n="localTitle">校验并安装到游戏</h2>
+            <p data-i18n="localIntro">网页生成的模组可直接安装；也可以导入 CLI 创建的 .dsmod 文件。重启游戏后再检查加载日志。</p>
+          </div>
+          <div class="local-import">
+            <button id="import-button" class="import-button" type="button" data-i18n="importButton" disabled>导入 .dsmod</button>
+            <input id="import-file" type="file" accept=".dsmod" hidden>
+          </div>
+        </div>
+        <p class="local-source"><span data-i18n="localSourceLabel">当前模组：</span><strong id="local-source">—</strong></p>
+        <div class="local-actions">
+          <button id="validate-local" type="button" data-i18n="validateLocal" disabled>校验格式</button>
+          <button id="install-local" type="button" data-i18n="installLocal" disabled>安装到本机游戏</button>
+          <button id="verify-local" type="button" data-i18n="verifyLocal" disabled>检查游戏加载日志</button>
+        </div>
+        <p id="local-status" class="local-status" role="status" aria-live="polite">正在检查本机服务…</p>
+        <p class="local-path"><span data-i18n="localPathLabel">游戏模组目录：</span><code id="local-path">—</code></p>
       </section>
       <footer class="footer"><span data-i18n="footerLeft">战场调校 / 玩家模组生成器</span><span data-i18n="footerRight">你的战局，你来定规则。</span></footer>
     </main>

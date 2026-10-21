@@ -1,6 +1,6 @@
 # 本地模组 CLI
 
-`npm run mod --` 调用项目内置的 `bin/mod-agent.mjs`，无需安装第三方 npm 包。它提供确定性的工具操作；AI 代理可根据玩家的自然语言需求选择命令和具体数值。网页生成器仍可独立使用。
+`npm run mod --` 调用项目内置的 `bin/mod-agent.mjs`，无需安装第三方 npm 包。它提供确定性的工具操作；AI 代理可根据玩家的自然语言需求选择命令和具体数值。网页可以导入 CLI 创建的文件并执行相同的校验、安装与日志检查，详情见 [网页与 CLI 互通](web-cli.md)。
 
 开发者持有 Unity 源码时，可先执行 `npm run catalog:check -- "D:\Unity Space\Survivor"`，检查 CLI 与网页共用的武器目录是否仍与 12 个武器升级资源一致。普通玩家只需使用 `catalog` 命令。
 

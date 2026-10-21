@@ -18,6 +18,7 @@
 - 按 IP 限制每小时生成次数，并限制全站每日生成次数。
 - 模型密钥只由服务端读取；模型接口由环境变量配置。
 - 提供本地 CLI 与仓库内 Agent 技能，支持生成、校验、安装 `.dsmod`，并根据 Unity 日志检查是否加载。
+- 网页可导入 CLI 创建的 `.dsmod`；在本机打开网页时，还可校验、安装和检查游戏日志。网页与 CLI 共用相同的本地操作模块，并保留文件原文以便交叉验证。
 
 ## 系统架构
 
@@ -26,40 +27,44 @@ flowchart LR
     Player[玩家浏览器]
     Agent[本地 AI 代理]
     UI[静态网页<br/>HTML / CSS / JavaScript]
-    Server[Node.js 服务<br/>静态文件与生成 API]
+    Server[Node.js 服务<br/>生成与本机操作 API]
     CLI[Node.js 本地 CLI]
-    Catalog[共享武器目录与包校验]
-    Validate[输入与模型结果校验]
+    Contract[共享武器目录与 .dsmod 校验]
+    Local[共享安装与日志验证模块]
     Model[OpenAI 兼容模型接口]
-    Mod[版本 1 .dsmod JSON]
+    Mod[版本 1 .dsmod 文件]
+    Folder[本机 Mods 目录和 Player.log]
     Game[Unity 游戏模组加载器]
 
     Player --> UI
     Agent -->|自然语言转为明确数值| CLI
-    UI -->|邀请码、武器、需求| Server
-    Server --> Catalog
-    CLI --> Catalog
-    Catalog --> Validate
-    Validate -->|通过后请求| Model
-    Model -->|生成 JSON| Validate
-    Validate -->|返回预览并下载| UI
-    UI --> Mod
-    CLI --> Mod
-    Mod -->|玩家手动复制到 Mods 文件夹| Game
+    UI <-->|生成、导入与本机操作| Server
+    Server -->|生成请求| Model
+    Model -->|结构化结果| Server
+    Server --> Contract
+    CLI --> Contract
+    Server --> Local
+    CLI --> Local
+    Contract --> Mod
+    UI <-->|下载或导入| Mod
+    Local --> Folder
+    Mod --> Folder
+    Folder --> Game
+    Game -->|加载消息| Folder
 ```
 
-网页服务使用 Node.js 内置模块提供静态文件与 `/api/mods/generate` 接口。本地 CLI 与网页共用武器目录和数据包校验，CLI 还可安装文件并检查 Unity Player 日志。游戏在本地读取 `.dsmod` 文件，加载日志与实际数值验证是两个不同的检查步骤。
+网页服务使用 Node.js 内置模块提供静态文件、生成接口与本机模组接口。CLI 与网页共用武器目录、数据包校验、安装与日志检查。只有服务监听本机回环地址时，本机操作接口才可用；网页不会自动安装，须由玩家点击安装。游戏日志检查不能代替实机数值测量。接口和限制见 [网页与 CLI 互通说明](docs/web-cli.md)。
 
 ## 技术栈
 
 | 部分 | 技术 | 用途 |
 | --- | --- | --- |
-| 页面 | HTML、CSS、原生 JavaScript | 表单、双语界面、结果预览与文件下载 |
-| 服务端 | Node.js 20+、内置 `node:http`、`fetch` | 静态资源、生成接口、模型请求与限流 |
-| 本地工具 | Node.js CLI、仓库内 Agent 技能 | 按明确数值生成、校验、安装并检查日志 |
+| 页面 | HTML、CSS、原生 JavaScript | 表单、双语界面、结果预览、文件导入与本机操作 |
+| 服务端 | Node.js 20+、内置 `node:http`、`fetch` | 静态资源、生成接口、本机接口、模型请求与限流 |
+| 本地工具 | Node.js CLI、仓库内 Agent 技能 | 按明确数值生成，调用共享模块校验、安装并检查日志 |
 | 模型接口 | OpenAI 兼容的 Chat Completions API | 将玩家描述转换为结构化调整数据 |
 | 模组格式 | JSON、`.dsmod` 扩展名 | 与 Unity 加载器共享的数据包契约 |
-| 校验 | Node.js 内置测试运行器 | `node --test` 校验等级及数值边界 |
+| 校验 | Node.js 内置测试运行器 | 校验等级、数值边界及网页与 CLI 往返流程 |
 
 项目没有第三方 npm 运行时依赖，无需执行 `npm install`。
 
@@ -102,6 +107,8 @@ npm start
 | `LLM_MODEL` | 空 | 请求使用的模型名称 |
 | `MAX_GENERATIONS_PER_WINDOW` | `4` | 每 IP 滚动一小时生成上限 |
 | `MAX_GENERATIONS_PER_DAY` | `20` | 全站每日生成上限，按 UTC 日期计算 |
+| `GAME_MODS_DIR` | 默认游戏 Mods 目录 | 本机接口使用的游戏模组目录；游戏安装路径不同可配置绝对路径 |
+| `GAME_PLAYER_LOG` | Mods 上一级的 `Player.log` | 本机接口读取的游戏日志；可配置绝对路径 |
 
 不要将真实邀请码或 API 密钥提交到 Git。限流计数保存在服务进程内存中，服务重启后会重置。
 
@@ -109,10 +116,11 @@ npm start
 
 1. 打开测试网站并输入邀请码。
 2. 选择武器，用自然语言描述希望调整的等级和数值。
-3. 检查预览中的武器、等级与改动，下载 `.dsmod` 文件。
-4. 先启动一次游戏，然后将文件复制到 `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Survivor\Mods`，再重启游戏。若公司名或产品名不同，请使用 Unity Player 日志 `[Player Mods]` 消息中显示的目录。
+3. 检查预览中的武器、等级与改动，下载 `.dsmod` 文件；也可在页面导入 CLI 创建的 `.dsmod`。
+4. 本机运行网页时，可点击“校验格式”和“安装到本机游戏”。也可以用 CLI 安装，或手动复制到 `%USERPROFILE%\AppData\LocalLow\DefaultCompany\Survivor\Mods`。
+5. 重启游戏并开始新一局，再点击“检查游戏加载日志”或执行 CLI `verify`。若公司名或产品名不同，按日志显示的目录设置 `GAME_MODS_DIR` / `GAME_PLAYER_LOG`，或使用 CLI 的路径参数。
 
-模组在每局开始时加载。网站不会自动安装模组，也没有游戏内模组浏览器或 Steam Workshop 集成。
+模组在每局开始时加载。本机网页只有在玩家点击后才写入 Mods 目录；CLI 和网页都不会覆盖同名文件。项目没有游戏内模组浏览器或 Steam Workshop 集成。
 
 ## `.dsmod` 范围
 

@@ -3,8 +3,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
-import { createPackage } from './package-contract.mjs';
+import { createPackage, validatePackageText } from './package-contract.mjs';
 import { weapons } from './weapon-catalog.mjs';
+import { defaultModsDir, installPackageText, verifyPackageText } from './local-mod-workflow.mjs';
 
 try {
   const localEnvironment = await readFile(new URL('./.env', import.meta.url), 'utf8');
@@ -39,13 +40,53 @@ const send = (response, status, data, headers = {}) => {
   response.end(JSON.stringify(data));
 };
 
-async function readJson(request) {
+async function readJson(request, limit = maxBodyBytes) {
   let body = '';
   for await (const chunk of request) {
     body += chunk;
-    if (Buffer.byteLength(body) > maxBodyBytes) throw new Error('Request is too large.');
+    if (Buffer.byteLength(body) > limit) throw new Error('Request is too large.');
   }
   try { return JSON.parse(body); } catch { throw new Error('Request must be valid JSON.'); }
+}
+
+function isLocalRequest(request) {
+  if (!['127.0.0.1', 'localhost', '::1'].includes(host.toLowerCase())) return false;
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress)) return false;
+  let target;
+  try { target = new URL(`http://${request.headers.host}`); } catch { return false; }
+  if (!['127.0.0.1', 'localhost', '[::1]'].includes(target.hostname) || target.port !== String(port)) return false;
+  return !request.headers.origin || request.headers.origin === target.origin;
+}
+
+function localPaths() {
+  return {
+    modsDir: process.env.GAME_MODS_DIR || defaultModsDir(),
+    ...(process.env.GAME_PLAYER_LOG ? { logPath: process.env.GAME_PLAYER_LOG } : {})
+  };
+}
+
+async function handleLocalAction(request, response, action) {
+  if (!isLocalRequest(request)) return send(response, 403, { error: 'Local mod operations require the loopback server.' });
+  if (!request.headers['content-type']?.toLowerCase().startsWith('application/json')) {
+    return send(response, 415, { error: 'Content type must be application/json.' });
+  }
+  let body;
+  try { body = await readJson(request, 128 * 1024); }
+  catch (error) { return send(response, 400, { error: error.message }); }
+  if (typeof body?.packageText !== 'string') return send(response, 400, { error: 'Package text is required.' });
+  try {
+    const packageData = validatePackageText(body.packageText);
+    if (action === 'validate') return send(response, 200, { package: packageData });
+    const paths = localPaths();
+    if (action === 'install') {
+      const installed = await installPackageText(body.packageText, paths);
+      return send(response, 200, { ...installed });
+    }
+    const verified = await verifyPackageText(body.packageText, paths);
+    return send(response, 200, { ...verified });
+  } catch (error) {
+    return send(response, error.message.startsWith('This package is already installed') ? 409 : 400, { error: error.message });
+  }
 }
 
 function consumeQuota(ip) {
@@ -165,6 +206,14 @@ async function serveStatic(request, response) {
 
 createServer(async (request, response) => {
   if (request.method === 'POST' && request.url === '/api/mods/generate') return handleGenerate(request, response);
+  if (request.method === 'GET' && request.url === '/api/local/status') {
+    if (!isLocalRequest(request)) return send(response, 200, { available: false });
+    try { return send(response, 200, { available: true, ...localPaths() }); }
+    catch { return send(response, 200, { available: false }); }
+  }
+  if (request.method === 'POST' && request.url === '/api/mods/validate') return handleLocalAction(request, response, 'validate');
+  if (request.method === 'POST' && request.url === '/api/mods/install') return handleLocalAction(request, response, 'install');
+  if (request.method === 'POST' && request.url === '/api/mods/verify') return handleLocalAction(request, response, 'verify');
   if (request.method !== 'GET' && request.method !== 'HEAD') return send(response, 405, { error: 'Method not allowed.' });
   await serveStatic(request, response);
 }).listen(port, host, () => {
