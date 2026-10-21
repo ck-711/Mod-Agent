@@ -134,10 +134,24 @@ npm start
 
 Unity 加载器也会校验模组。它最多读取 Mods 目录顶层的 50 个文件，每个文件不超过 64 KiB；多个文件修改同一字段时，按文件名不区分大小写排序应用，后应用的值生效。完整格式与加载规则见 Unity 项目 `Assets/DOTSSurvivors/AI/MarkdownDocumentation/integrations/PlayerMods.md`。
 
-## 开发校验
+## Benchmark / 评测
 
 ```powershell
 npm test
 ```
 
-该命令运行仓库现有的 Node.js 校验用例（`node --test`）。
+该命令运行仓库现有的 Node.js 契约和互通测试（`node --test`），覆盖数据包格式、边界值、CLI 和网页接口的往返流程；它不衡量自然语言生成的命中率。
+
+`evals/mod-generation-eval.mjs` 对人工审核的请求和已捕获的生成结果做离线评测。JSONL 每行包含唯一 `id`、完整 `expected` 数据包，以及作为 `prediction` 的生成器返回 `package`；`expected` 与 `prediction` 都使用版本 1 `.dsmod` 结构。人工标注只应记录用户明确要求的武器、等级与改动值，不计随机生成的包 ID 和标题。
+
+```json
+{"id":"example-saw","expected":{"gameId":"dots-survivors","schemaVersion":1,"id":"gold-saw","title":"Gold Saw","weapons":[{"weaponType":"SawBlade","levels":[{"level":1,"overrideDamage":true,"damage":28,"overrideCooldown":false,"cooldownSeconds":0}]}]},"prediction":{"gameId":"dots-survivors","schemaVersion":1,"id":"model-saw","title":"Model Saw","weapons":[{"weaponType":"SawBlade","levels":[{"level":1,"overrideDamage":true,"damage":28,"overrideCooldown":false,"cooldownSeconds":0}]}]}}
+```
+
+这是输入格式示例，不是实测样本。捕获生成结果时保留请求原文、所选武器、模型版本和失败响应；失败样本的 `prediction` 可设为 `null`。先在隔离的测试环境批量生成，留意服务按 IP 和每日限流，再运行：
+
+```powershell
+node evals/mod-generation-eval.mjs --input evals/cases.jsonl --output evals/reports/mod-generation.json
+```
+
+报告给出数据包格式合法率和改动字段完全匹配率，并包含逐条错误与数据集 SHA-256。合法率只验证共享契约；完全匹配率比较武器、等级、伤害与冷却的目标值，不代表游戏内实际生效。实机效果仍需按 [本地 CLI 文档](docs/cli.md) 安装、查看 Unity 日志并检查实际数值。目前仓库没有人工标注的生成评测集或该 Benchmark 的运行报告。
