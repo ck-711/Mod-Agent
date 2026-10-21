@@ -17,30 +17,55 @@
 **生成 `.dsmod` 数据包**
 
 ```mermaid
-flowchart LR
-    player["网页需求"] --> server["Node.js<br/>准入与额度"]
-    server --> model["模型接口<br/>提出武器数值"]
-    model --> validate["共享契约<br/>等级与数值校验"]
-    agent["本地 Agent / CLI"] --> validate
-    validate --> package[".dsmod 数据包"]
-    classDef entry fill:#EAF4FF,stroke:#5B8DEF,color:#17324D;
-    classDef outcome fill:#EAF8F0,stroke:#49A878,color:#184B32;
-    class player,agent entry;
-    class package outcome;
+sequenceDiagram
+    autonumber
+    actor P as 玩家
+    participant UI as 浏览器
+    participant Server as server.mjs
+    participant Model as 模型接口
+    participant Contract as 共享校验模块
+
+    P->>UI: 选择现有武器并描述数值改动
+    UI->>Server: 提交生成请求
+    Server->>Server: 校验邀请码、长度与生成额度
+    Server->>Server: 读取武器目录及原始等级数值
+    Server->>Model: 发送受约束的生成提示词
+    Model-->>Server: 返回结构化等级改动
+    Server->>Contract: 校验等级、字段、边界和包格式
+    alt 校验通过
+        Contract-->>Server: 版本 1 .dsmod 数据包
+        Server-->>UI: 预览、复制 JSON 与下载
+    else 校验失败
+        Contract-->>Server: 明确的拒绝原因
+        Server-->>UI: 提示玩家调整需求
+    end
+    Note over Contract: 本地 CLI 使用同一包契约
 ```
 
 **安装、游戏加载与验证**
 
 ```mermaid
-flowchart LR
-    package[".dsmod 文件"] --> mods["玩家安装到 Mods"]
-    mods --> loader["Unity 加载器<br/>复核数据包"]
-    loader --> game["复制基线 Blob<br/>下一局应用数值"]
-    loader --> verify["Player.log<br/>核对加载结果"]
-    classDef entry fill:#EAF4FF,stroke:#5B8DEF,color:#17324D;
-    classDef outcome fill:#EAF8F0,stroke:#49A878,color:#184B32;
-    class package entry;
-    class game,verify outcome;
+sequenceDiagram
+    autonumber
+    actor P as 玩家
+    participant Local as 本机安装模块
+    participant Files as Mods / Player.log
+    participant Loader as PlayerModLoaderSystem
+    participant Game as GameStartSystem
+
+    P->>Local: 确认安装 .dsmod 或使用 CLI
+    Local->>Local: 网页接口校验回环来源，检查包契约与同名文件
+    Local->>Files: 写入 Mods 目录，不覆盖同名文件
+    P->>Game: 重启游戏并开始新一局
+    Note over Loader,Game: Loader 在 GameStartSystem 之前运行
+    Loader->>Files: 按文件名读取并限制数量与大小
+    Files-->>Loader: 返回可读取的数据包
+    Loader->>Loader: 复核版本、武器、等级和数值
+    Loader->>Game: 复制烘焙 Blob 并覆盖声明字段
+    Loader->>Files: 写入加载与应用日志
+    P->>Local: 触发验证
+    Local->>Files: 比较安装文件并读取安装后的日志
+    Local-->>P: 返回加载验证结果
 ```
 
 网页服务使用 Node.js 内置模块提供静态文件、生成接口与本机模组接口。CLI 与网页共用武器目录、数据包校验、安装与日志检查。只有服务监听本机回环地址时，本机操作接口才可用；网页不会自动安装，须由玩家点击安装。游戏日志用于确认加载状态，游戏内效果通过实机数值检查确认。接口和限制见 [网页与 CLI 互通说明](docs/web-cli.md)。
